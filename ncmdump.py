@@ -65,6 +65,9 @@ def dump(file_path):
     # file_name = meta_data['musicName'] + '.' + meta_data['format']
     # m = open(os.path.join(os.path.split(file_path)[0],file_name),'wb')
     new_file_path = os.path.splitext(file_path)[0] + '.' + meta_data['format']
+    if os.path.exists(new_file_path): # skip
+        print(new_file_path, 'already exists')
+        return
     m = open(new_file_path,'wb')
     chunk = bytearray()
     while True:
