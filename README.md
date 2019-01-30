@@ -8,11 +8,18 @@
 <br /> 有兴趣可以试试做个PHP版本，毕竟是世界上最好的语言，可能比Python快多了（逃
 <br /> 目前有两个py文件，一个为单文件转换，一个为文件夹内所有ncm文件的批量转换（folder_dump.py），按需使用。
 
-## 依赖 pycrypto库 
+## 依赖
+### pycrypto库 
 <br />（你用C++版本可以用OpenSSL库或者Crypto++库，也可以手写AES128 ECB算法，然后再用JSON解析专辑名之类的）
 
 ```
 pip(3) install pycrypto
 ```
+
+### [mutagen](https://github.com/quodlibet/mutagen)
+<br /> 生成 tags
+
+### [Pillow](https://pillow.readthedocs.io/en/3.0.0/index.html)
+<br /> 解析封面图
 
 ## 嘤嘤嘤
