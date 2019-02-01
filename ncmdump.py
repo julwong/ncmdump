@@ -50,24 +50,33 @@ def dump(file_path):
     cryptor = AES.new(meta_key, AES.MODE_ECB)
     meta_data = unpad(cryptor.decrypt(meta_data)).decode('utf-8')[6:]
     meta_data = json.loads(meta_data)
-    print(json.dumps(meta_data, indent=2))
     crc32 = f.read(4)
     crc32 = struct.unpack('<I', bytes(crc32))[0]
     f.seek(5, 1)
     image_size = f.read(4)
     image_size = struct.unpack('<I', bytes(image_size))[0]
-    print(image_size)
     image_data = f.read(image_size)
-    thumb_file_path = os.path.splitext(file_path)[0] + '.thumb'
+    thumb_file_path = os.path.join(os.path.split(file_path)[0], meta_data['album'] + '.thumb')
     if not os.path.exists(thumb_file_path): # create cover front picture
         with open(thumb_file_path, 'wb') as img:
             img.write(image_data)
+            
+    from PIL import Image
+    im = Image.open(thumb_file_path)
+    im_mime =  im.get_format_mimetype()
+    im_width = im.width
+    im_height = im.height
+    im.close()
+
     # file_name = meta_data['musicName'] + '.' + meta_data['format']
     # m = open(os.path.join(os.path.split(file_path)[0],file_name),'wb')
     new_file_path = os.path.splitext(file_path)[0] + '.' + meta_data['format']
-    if os.path.exists(new_file_path): # skip
+    if os.path.exists(new_file_path) and meta_data['format'] != 'mp3': # skip
         print(new_file_path, 'already exists')
         return
+    
+    print(json.dumps(meta_data, indent=2))
+
     m = open(new_file_path,'wb')
     chunk = bytearray()
     while True:
@@ -82,24 +91,43 @@ def dump(file_path):
     m.close()
     f.close()
     # add tags
-    m = mutagen.File(new_file_path)
     # {'tracktotal': ['12'], 'artist': ['KOKIA'], 'genre': ['J-Pop\r'], 'tracknumber': ['3'], 'title': ['Ave Maria'], 'date': ['2008'], 'album': ['The VOICE']}
-    m['artist'] = [artist[0] for artist in meta_data['artist']]
-    m['title'] = [meta_data['musicName']]
-    m['album'] = [meta_data['album']]
     if meta_data['format'] == 'flac':
+        m = mutagen.flac.File(new_file_path)
+        m['artist'] = [artist[0] for artist in meta_data['artist']]
+        m['title'] = [meta_data['musicName']]
+        m['album'] = [meta_data['album']]
         pic = mutagen.flac.Picture()
         pic.data = image_data
         pic.type = mutagen.id3.PictureType.COVER_FRONT
         # require Pillow
-        from PIL import Image
-        im = Image.open(thumb_file_path)
-        pic.mime =  im.get_format_mimetype()
-        pic.width = im.width
-        pic.height = im.height
+        #from PIL import Image
+        #im = Image.open(thumb_file_path)
+        pic.mime =  im_mime
+        pic.width = im_width
+        pic.height = im_height
         pic.depth = 16
         m.add_picture(pic)
-    m.save()
+        m.save()
+    elif meta_data['format'] == 'mp3':
+        from mutagen.mp3 import EasyMP3
+        m = EasyMP3(new_file_path)
+        m['artist'] = [artist[0] for artist in meta_data['artist']]
+        m['title'] = [meta_data['musicName']]
+        m['album'] = [meta_data['album']]
+        m.save()
+        m = EasyMP3(new_file_path, ID3=mutagen.id3.ID3)
+        m.tags.add(
+            mutagen.id3.APIC(
+                encoding=3, # 3 is for utf-8
+                mime=im_mime,
+                type=mutagen.id3.PictureType.COVER_FRONT,
+                desc=u'Cover',
+                data=image_data
+            )
+        )
+        m.save()
+
     
 if __name__ == '__main__':
     import sys
